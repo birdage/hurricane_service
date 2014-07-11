@@ -2,6 +2,7 @@
 """WSGI server example"""
 from __future__ import print_function
 from gevent.pywsgi import WSGIServer
+from shapely.geometry import Polygon,Point
 import netCDF4
 import datetime
 import ast
@@ -9,6 +10,9 @@ import json
 
 year = "year"
 bbox = "bbox"
+
+rec_year = "all"
+rec_bbox = Polygon ((89 0, 89 -35, 26 -35, 26 0, 89 0))
 
 class HurService():
     def __init__(self):
@@ -20,16 +24,36 @@ class HurService():
 
     def application(self,env, start_response):
         return_string = ''
-
+        print (env['PATH_INFO'])
         if env['PATH_INFO'] == '/':
             start_response('404 Not Found', [('Content-Type', 'application/json')])
             return_string = '<h1>Not Found</h1>'
+        elif  env['PATH_INFO'] =="/favicon.ico":
+            start_response('404 Not Found', [('Content-Type', 'application/json')])
+            return_string = '<h1>Not Found</h1>'   
+            return 
         else:
 
-            start_response('200 OK', [('Content-Type', 'application/json')])
-            return_string = self.open_dataset(2009)             
+            request = (env['PATH_INFO'])
+            request = request[1:-1]
+            
+            split_request = request.split("&")
+            if len(split_request) > 1:
+                query_params = {}
+                for param in split_request:
+                    param_request = param.split("=")                  
+                    query_params[param_request[0]] = param_request[1]
+            
+                start_response('200 OK', [('Content-Type', 'application/json')])
+                return_string = self.open_dataset(query_params["year"])             
+                return [return_string]
+            
+            else:
+                start_response('404 Not Found', [('Content-Type', 'application/json')])
+                return_string = '<h1>Not Found</h1>'    
+                return [return_string]
 
-        return [return_string]
+       
         
     def open_dataset(self,year):
         dap_url = "./Allstorms.ibtracs_wmo.v03r05.nc"
